@@ -514,8 +514,8 @@ class DahuaVTODz:
     def on_disconnect(self):
         Domoticz.Error("Got disconnected from Dahua VTO; Reconnecting in ~30...")
         self.connection = None
-        self.keep_alive_interval_next = 30
         self.reset_params()
+        self.keep_alive_interval_next = 30
         self.update_device(1, Devices[1].nValue, Devices[1].sValue, 1)
         self.update_device(2, Devices[2].nValue, Devices[2].sValue, 1)
         self.update_device(3, Devices[3].nValue, Devices[3].sValue, 1)

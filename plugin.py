@@ -499,6 +499,11 @@ class DahuaVTODz:
     def on_message(self, data):
         message = self.parse_response(data)
 
+        if message is None:
+            if Parameters["Mode6"] == "Debug":
+                Domoticz.Log("Unparseable data message received: {data}")
+            return
+
         message_id = message.get("id")
 
         handler: Callable = self.data_handlers.get(message_id, self.handle_default)

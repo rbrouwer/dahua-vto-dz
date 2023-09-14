@@ -61,6 +61,7 @@ class DahuaVTODz:
     dahua_details = {}
     hold_time = 0
     hold_time_date = None
+    prevMessage = None
 
     def __init__(self):
         return
@@ -417,23 +418,28 @@ class DahuaVTODz:
 
         if "deviceType" not in self.dahua_details:
             self.data_handlers = {key: val for key, val in self.data_handlers.items() if val != self.handle_device_type}
+            Domoticz.Error("Reloading device type.")
             self.load_device_type()
 
         if "version" not in self.dahua_details or "buildDate" not in self.dahua_details:
             self.data_handlers = {key: val for key, val in self.data_handlers.items() if val != self.handle_version}
+            Domoticz.Error("Reloading version.")
             self.load_version()
 
         if "serialNumber" not in self.dahua_details:
             self.data_handlers = {key: val for key, val in self.data_handlers.items() if val != self.handle_serial_number}
+            Domoticz.Error("Reloading serial number.")
             self.load_serial_number()
 
         if self.access_control_factory_instance is None:
             self.data_handlers = {key: val for key, val in self.data_handlers.items() if
                                   val != self.handle_access_control_factory_instance}
+            Domoticz.Error("Reloading access control factory instance.")
             self.load_access_control_factory_instance()
 
         if self.unlock_interval is None or self.hold_time is None:
             self.data_handlers = {key: val for key, val in self.data_handlers.items() if val != self.handle_access_control}
+            Domoticz.Error("Reloading access control.")
             self.load_access_control()
 
         self.retry_attempt_interval_next = 5
@@ -497,12 +503,28 @@ class DahuaVTODz:
             Domoticz.Log(f"{data}")
 
     def on_message(self, data):
-        message = self.parse_response(data)
+        if self.prevMessage is not None:
+            if Parameters["Mode6"] == "Debug":
+                Domoticz.Log(f"Previously unparseable message is prepended to new message: {data}")
+            message = self.parse_response(self.prevMessage + data)
+            if message is None:
+                if Parameters["Mode6"] == "Debug":
+                    Domoticz.Error(f"Unparseable data message received: {self.prevMessage}")
+                message = self.parse_response(data)
+        else:
+            message = self.parse_response(data)
 
         if message is None:
+            if self.prevMessage is None:
+                self.prevMessage = data
+            else:
+                self.prevMessage = self.prevMessage + data
+
             if Parameters["Mode6"] == "Debug":
-                Domoticz.Log("Unparseable data message received: {data}")
+                Domoticz.Log(f"Unparseable data message (possible partial) received: {data}")
             return
+
+        self.prevMessage = None
 
         message_id = message.get("id")
 
@@ -573,6 +595,7 @@ class DahuaVTODz:
         self.dahua_details = {}
         self.hold_time = 0
         self.hold_time_date = None
+        self.prevMessage = None
 
     @staticmethod
     def parse_response(response):
